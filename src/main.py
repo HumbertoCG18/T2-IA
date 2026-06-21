@@ -1,5 +1,6 @@
 import sys
-import json
+import random
+import math
 
 def leituraArquivo(path):
     global total, prefEscolaA, prefEscolaB
@@ -27,18 +28,65 @@ def leituraArquivo(path):
 
     print(f"Arquivo lido. Total de duplas: {total}\n")
 
-def printTabelas():
-    """Exibe as matrizes de preferências formatadas no terminal"""
-    print("=== MATRIZ DE PREFERÊNCIAS: ESCOLA A ===")
-    for idx, prefs in enumerate(prefEscolaA):
-        print(f"Aluno A{idx + 1}: {prefs}")
+# posiciona aleatoriamente os alunos da escola B
+def inicializa():
+    global solucaoAtual, solucaoVizinha
+    solucaoAtual = list(range(total))
+    random.shuffle(solucaoAtual)
+    solucaoVizinha = solucaoAtual.copy()
+
+# faz o swap 
+def geraSolucaoVizinha():
+    global solucaoAtual, solucaoVizinha
+    solucaoVizinha = solucaoAtual.copy()
+    
+    q1 = random.randint(0, total - 1)
+    q2 = random.randint(0, total - 1)
+    while q1 == q2:
+        q2 = random.randint(0, total - 1)
         
-    print("\n=== MATRIZ DE PREFERÊNCIAS: ESCOLA B ===")
-    for idx, prefs in enumerate(prefEscolaB):
-        print(f"Aluno B{idx + 1}: {prefs}")
+    solucaoVizinha[q1], solucaoVizinha[q2] = solucaoVizinha[q2], solucaoVizinha[q1]
+
+# heuristica de vdd ainda n implementada (função temporária para testes)
+def h(solucao):
+    return sum(abs(i - solucao[i]) for i in range(total))
+
+def executaSimulatedAnnealing():
+    global solucaoAtual, solucaoVizinha
+    
+    T = 1000000.0
+    iteracoes = 200000
+    
+    print(f"Simulated Annealing\nDimensão: {total}\n")
+    inicializa()
+    
+    for t in range(1, iteracoes + 1):
+        valorSolucaoAtual = h(solucaoAtual)
+        print(f"Ciclo: {t}- Temperatura: {T} - Solução Atual - h={valorSolucaoAtual}")
+        
+        if valorSolucaoAtual == 0:
+            break
+            
+        geraSolucaoVizinha()
+        valorSolucaoVizinha = h(solucaoVizinha)
+        
+        energia = valorSolucaoVizinha - valorSolucaoAtual
+        if energia <= 0:
+            solucaoAtual = solucaoVizinha.copy()
+        else:
+            probabilidade = math.exp(-energia / T)
+            valor = random.random()
+            if valor < probabilidade:
+                print("Aceitou uma solução pior...")
+                solucaoAtual = solucaoVizinha.copy()
+                
+        T = T * 0.6
+
+    print(f"Solução Atual - h={h(solucaoAtual)}")
+    print(solucaoAtual)
 
 if __name__ == "__main__":
     if len(sys.argv) >= 2:
         path = sys.argv[1]
         leituraArquivo(path)
-        printTabelas() 
+        executaSimulatedAnnealing()
