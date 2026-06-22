@@ -79,7 +79,7 @@ def executaSimulatedAnnealing(modo="final"):
     T_MIN = 1e-3          # temperatura mínima, pq ele tava travando em 5e-324
     FATOR_RESFRIAMENTO = 0.999
     ITERACOES_MAX = 200000
-    LIMITE_ESTAGNACAO = 5000  
+    LIMITE_ESTAGNACAO = 5000
 
     print(f"Simulated Annealing\nDimensão: {total}\n")
     inicializa()
@@ -93,6 +93,13 @@ def executaSimulatedAnnealing(modo="final"):
         valorSolucaoAtual = h(solucaoAtual)
         historico_h.append(valorSolucaoAtual)
 
+        if valorSolucaoAtual < melhor_h:
+            melhor_h = valorSolucaoAtual
+            melhorSolucao = solucaoAtual.copy()
+            iteracoes_sem_melhora = 0
+        else:
+            iteracoes_sem_melhora += 1
+
         if modo == "passo":
             print(f"Ciclo: {t} - Temperatura: {T:.6f} - Solução Atual - h={valorSolucaoAtual}")
         elif modo == "final" and t % 1000 == 0:
@@ -101,6 +108,11 @@ def executaSimulatedAnnealing(modo="final"):
         if valorSolucaoAtual == 0:
             if modo == "passo":
                 print("Solução ótima encontrada (h=0).")
+            break
+
+        if iteracoes_sem_melhora >= LIMITE_ESTAGNACAO:
+            if modo == "passo":
+                print(f"\nSem melhora por {LIMITE_ESTAGNACAO} iterações. Encerrando.")
             break
 
         geraSolucaoVizinha()
@@ -116,19 +128,6 @@ def executaSimulatedAnnealing(modo="final"):
                 if modo == "passo":
                     print("Aceitou uma solução pior...")
                 solucaoAtual = solucaoVizinha.copy()
-
-        # controle de estagnação
-        if valorSolucaoAtual < melhor_h:
-            melhor_h = valorSolucaoAtual
-            melhorSolucao = solucaoAtual.copy()
-            iteracoes_sem_melhora = 0
-        else:
-            iteracoes_sem_melhora += 1
-
-        if iteracoes_sem_melhora >= LIMITE_ESTAGNACAO:
-            if modo == "passo":
-                print(f"\nSem melhora por {LIMITE_ESTAGNACAO} iterações. Encerrando.")
-            break
 
         T = max(T * FATOR_RESFRIAMENTO, T_MIN)
 
