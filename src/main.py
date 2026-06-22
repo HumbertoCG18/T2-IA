@@ -47,9 +47,26 @@ def geraSolucaoVizinha():
         
     solucaoVizinha[q1], solucaoVizinha[q2] = solucaoVizinha[q2], solucaoVizinha[q1]
 
-# heuristica de vdd ainda n implementada (função temporária para testes)
 def h(solucao):
-    return sum(abs(i - solucao[i]) for i in range(total))
+    custo_total = 0
+    for i in range(total):
+        aluno_A = i
+        aluno_B = solucao[i]
+        
+        try:
+            rank_A = prefEscolaA[aluno_A].index(aluno_B)
+        except ValueError:
+            rank_A = total  
+
+        try:
+            rank_B = prefEscolaB[aluno_B].index(aluno_A)
+        except ValueError:
+            rank_B = total
+        
+        custo_total += (rank_A + rank_B)
+        
+    return custo_total
+
 
 def executaSimulatedAnnealing():
     global solucaoAtual, solucaoVizinha
@@ -80,7 +97,7 @@ def executaSimulatedAnnealing():
                 print("Aceitou uma solução pior...")
                 solucaoAtual = solucaoVizinha.copy()
                 
-        T = T * 0.6
+        T = T * 0.9995
 
     print(f"Solução Atual - h={h(solucaoAtual)}")
     print(solucaoAtual)
