@@ -79,7 +79,7 @@ def executaSimulatedAnnealing(modo="final"):
     T_MIN = 1e-3          # temperatura mínima, pq ele tava travando em 5e-324
     FATOR_RESFRIAMENTO = 0.999
     ITERACOES_MAX = 200000
-    LIMITE_ESTAGNACAO = 50000
+    LIMITE_ESTAGNACAO = 5000
 
     print(f"Simulated Annealing\nDimensão: {total}\n")
     inicializa()
