@@ -75,11 +75,11 @@ def h(solucao):
 def executaSimulatedAnnealing(modo="final"):
     global solucaoAtual, solucaoVizinha
 
-    T = 1000000.0
+    T = 100.0
     T_MIN = 1e-3          # temperatura mínima, pq ele tava travando em 5e-324
-    FATOR_RESFRIAMENTO = 0.999
+    FATOR_RESFRIAMENTO = 0.9999
     ITERACOES_MAX = 200000
-    LIMITE_ESTAGNACAO = 5000
+    LIMITE_ESTAGNACAO = 50000
 
     print(f"Simulated Annealing\nDimensão: {total}\n")
     inicializa()
