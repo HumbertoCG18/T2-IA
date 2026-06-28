@@ -1,63 +1,180 @@
 from pathlib import Path
 import sys
+import random
+import math
+
 
 diretorio_script = Path(__file__).parent
 diretorio_raiz = diretorio_script.parent
 diretorio_saidas = diretorio_raiz / "saidas"
 diretorio_entradas = diretorio_raiz / "entradas"
 
-if len(sys.argv) < 2:
-    print("Uso: python main.py <nome_arquivo_entrada>")
-    sys.exit(1)
-nome_arquivo_entrada = sys.argv[1]
-print(f"Processando arquivo de entrada: {nome_arquivo_entrada}")
 
-def ler_arquivo(caminho):
-    # Lê todas as linhas do arquivo
-    with open(caminho, "r", encoding="utf-8") as f:
-        linhas_brutas = f.readlines()
+def leituraArquivo(path):
+    global total, prefEscolaA, prefEscolaB
 
-    # Limpa cada linha (remove quebras/espaços das pontas)
-    # e descarta linhas vazias
-    linhas = []
-    for linha in linhas_brutas:
-        linha_limpa = linha.strip()
-        if linha_limpa != "":
-            linhas.append(linha_limpa)
+    with open(path, 'r', encoding='utf-8') as f:
+        linhas = f.readlines()
 
-    # A PRIMEIRA linha é o número de duplas
-    n = int(linhas[0])
+    linhas = [linha.strip() for linha in linhas if linha.strip() != ""]
 
-    # Separa os dois blocos de alunos
-    linhas_A = linhas[1 : 1 + n]          # n linhas logo após o cabeçalho
-    linhas_B = linhas[1 + n : 1 + 2 * n]  # as n linhas seguintes
+    primeiraLinha = linhas[0].split(']')[-1].strip()
+    total = int(primeiraLinha)
 
-    # --- Escola A ---
-    preferencias_A = []
-    for linha in linhas_A:
-        pedacos = linha.split()                # "2 3 4" -> ["2","3","4"]
-        ids = pedacos[1:]                      # descarta o ID (primeiro)
-        preferencias = [int(x) for x in ids]   # texto -> número inteiro
-        preferencias_A.append(preferencias)
+    prefEscolaA = []
+    prefEscolaB = []
 
-    # --- Escola B --- (mesma lógica)
-    preferencias_B = []
-    for linha in linhas_B:
-        pedacos = linha.split()
-        ids = pedacos[1:]
-        preferencias = [int(x) for x in ids]
-        preferencias_B.append(preferencias)
+    for i in range(1, total + 1):
+        linhaLimpa = linhas[i].split(']')[-1].strip()
+        partes = linhaLimpa.split()
+        preferencias = [int(x) - 1 for x in partes[1:]]
+        prefEscolaA.append(preferencias)
 
-    return n, preferencias_A, preferencias_B
+    for i in range(total + 1, (total * 2) + 1):
+        linhaLimpa = linhas[i].split(']')[-1].strip()
+        partes = linhaLimpa.split()
+        preferencias = [int(x) - 1 for x in partes[1:]]
+        prefEscolaB.append(preferencias)
 
-try:
-    arquivo_entrada = diretorio_entradas / nome_arquivo_entrada
-    n, preferencias_A, preferencias_B = ler_arquivo(arquivo_entrada)
-except FileNotFoundError:
-    print(f"Erro: Arquivo '{nome_arquivo_entrada}' não encontrado.")
-    sys.exit(1)
+    print(f"Arquivo lido. Total de duplas: {total}\n")
 
-# --- Conferência: confirme que a leitura funcionou ---
-print(f"Número de duplas (n): {n}")
-print(f"Preferências A: {preferencias_A}")
-print(f"Preferências B: {preferencias_B}")
+
+# posiciona aleatoriamente os alunos da escola B
+def inicializa():
+    global solucaoAtual, solucaoVizinha
+    solucaoAtual = list(range(total))
+    random.shuffle(solucaoAtual)
+    solucaoVizinha = solucaoAtual.copy()
+
+
+# faz o swap
+def geraSolucaoVizinha():
+    global solucaoAtual, solucaoVizinha
+    solucaoVizinha = solucaoAtual.copy()
+
+    q1 = random.randint(0, total - 1)
+    q2 = random.randint(0, total - 1)
+    while q1 == q2:
+        q2 = random.randint(0, total - 1)
+
+    solucaoVizinha[q1], solucaoVizinha[q2] = solucaoVizinha[q2], solucaoVizinha[q1]
+
+
+def h(solucao):
+    custo_total = 0
+    for i in range(total):
+        aluno_A = i
+        aluno_B = solucao[i]
+
+        try:
+            rank_A = prefEscolaA[aluno_A].index(aluno_B)
+        except ValueError:
+            rank_A = total
+
+        try:
+            rank_B = prefEscolaB[aluno_B].index(aluno_A)
+        except ValueError:
+            rank_B = total
+
+        custo_total += (rank_A + rank_B)
+
+    return custo_total
+
+
+def executaSimulatedAnnealing(modo="final"):
+    global solucaoAtual, solucaoVizinha
+
+    T = 100.0
+    T_MIN = 1e-3          # temperatura mínima, pq ele tava travando em 5e-324
+    FATOR_RESFRIAMENTO = 0.999
+    ITERACOES_MAX = 200000
+    LIMITE_ESTAGNACAO = 5000
+
+    print(f"Simulated Annealing\nDimensão: {total}\n")
+    inicializa()
+
+    historico_h = []
+    melhor_h = h(solucaoAtual)
+    melhorSolucao = solucaoAtual.copy()
+    iteracoes_sem_melhora = 0
+
+    for t in range(1, ITERACOES_MAX + 1):
+        valorSolucaoAtual = h(solucaoAtual)
+        historico_h.append(valorSolucaoAtual)
+
+        if valorSolucaoAtual < melhor_h:
+            melhor_h = valorSolucaoAtual
+            melhorSolucao = solucaoAtual.copy()
+            iteracoes_sem_melhora = 0
+        else:
+            iteracoes_sem_melhora += 1
+
+        if modo == "passo":
+            print(f"Ciclo: {t} - Temperatura: {T:.6f} - Solução Atual - h={valorSolucaoAtual}")
+        elif modo == "final" and t % 1000 == 0:
+            print(f"Ciclo: {t} - h={valorSolucaoAtual} (melhor até agora: {melhor_h})")
+
+        if valorSolucaoAtual == 0:
+            if modo == "passo":
+                print("Solução ótima encontrada (h=0).")
+            break
+
+        if iteracoes_sem_melhora >= LIMITE_ESTAGNACAO:
+            if modo == "passo":
+                print(f"\nSem melhora por {LIMITE_ESTAGNACAO} iterações. Encerrando.")
+            break
+
+        geraSolucaoVizinha()
+        valorSolucaoVizinha = h(solucaoVizinha)
+
+        energia = valorSolucaoVizinha - valorSolucaoAtual
+        if energia <= 0:
+            solucaoAtual = solucaoVizinha.copy()
+        else:
+            probabilidade = math.exp(-energia / T)
+            valor = random.random()
+            if valor < probabilidade:
+                if modo == "passo":
+                    print("Aceitou uma solução pior...")
+                solucaoAtual = solucaoVizinha.copy()
+
+        T = max(T * FATOR_RESFRIAMENTO, T_MIN)
+
+        if modo == "passo":
+            input("Pressione Enter para continuar...")
+
+    print(f"\nMelhor solução encontrada - h={melhor_h}")
+    print(f"Solução codificada: {melhorSolucao}")
+    print("Solução decodificada (par escola A -> escola B):")
+    for i, par in enumerate(melhorSolucao):
+        print(f"  Aluno A{i + 1} -- Aluno B{par + 1}")
+
+    return historico_h
+
+
+def perguntaModo():
+    print("Escolha o modo de execução:")
+    print("  1 - Passo a passo (pausa a cada iteração)")
+    print("  2 - Final (executa direto e mostra só o resultado)")
+
+    while True:
+        escolha = input("Digite 1 ou 2: ").strip()
+        if escolha == "1":
+            return "passo"
+        elif escolha == "2":
+            return "final"
+        else:
+            print("Opção inválida. Digite 1 ou 2.")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) >= 2:
+        nome_arquivo_entrada = sys.argv[1]
+        arquivo_entrada = diretorio_entradas / nome_arquivo_entrada
+        leituraArquivo(arquivo_entrada)
+        modo = perguntaModo()
+        executaSimulatedAnnealing(modo)
+    else:
+        print("Uso: python main.py <arquivo_entrada>")
+        sys.exit(1)
+
